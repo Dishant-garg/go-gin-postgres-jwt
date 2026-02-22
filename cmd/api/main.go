@@ -5,6 +5,7 @@ import "github.com/gin-gonic/gin"
 import "go_gin_postgres_jwt/internal/config"
 import "go_gin_postgres_jwt/internal/database"
 import "github.com/jackc/pgx/v5/pgxpool"
+import "go_gin_postgres_jwt/internal/handlers"
 
 func main() {
 	var cfg *config.Config
@@ -33,5 +34,8 @@ func main() {
 			"database" : "connected",
 		})
 	})
+	Router.POST("/todos", handlers.CreateTodoHandler(pool))
+	Router.GET("/todos", handlers.GetAllTodosHandler(pool))
+	
 	Router.Run(":" + cfg.Port)
 }

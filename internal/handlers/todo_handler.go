@@ -1,0 +1,64 @@
+package handlers
+
+import (
+	"go_gin_postgres_jwt/internal/repository"
+	"net/http"
+	"strconv"  
+	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/jackc/pgx/v5"
+)
+
+type CreateTodoRequest struct {
+	Title string `json:"title" binding:"required"`
+	Completed bool `json:"completed"`
+}
+
+func CreateTodoHandler(pool *pgxpool.Pool) gin.HandlerFunc {
+      return func(c *gin.Context) {
+		var req CreateTodoRequest
+		if err := c.ShouldBindJSON(&req); err != nil{
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		todo, err := repository.CreateTodo(pool, req.Title, req.Completed)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusCreated, todo)
+	  }
+}
+
+func GetAllTodosHandler(pool *pgxpool.Pool) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		todos, err := repository.GetAllTodos(pool)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, todos)
+	}
+}
+
+func GetTodoByIDHandler(pool *pgxpool.Pool) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		idStr := c.Param("id")
+		id, err := strconv.Atoi(idStr)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID"})
+			return
+		}
+		todo, err := repository.GetTodoByID(pool, id)
+		if err != nil {
+			if err == pgx.ErrNoRows {
+				c.JSON(http.StatusNotFound, gin.H{"error": "Todo not found"})
+				return 
+			}
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		c.JSON(http.StatusOK, todo)
+	}
+}
